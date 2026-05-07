@@ -1,45 +1,47 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { KeyRound } from 'lucide-vue-next'
+import { KeyRound, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   uuid: string
 }>()
 
-const password = ref('')
+const router = useRouter()
+const authStore = useAuthStore()
 const error = ref('')
-const loading = ref(false)
+const loading = ref(true)
 
-async function submit() {
-  if (!password.value.trim()) {
-    error.value = 'Please enter the password'
-    return
-  }
+async function confirmLogin() {
   loading.value = true
   error.value = ''
   try {
-    const res = await fetch(`/auth/direct/${props.uuid}`, {
+    const res = await fetch(`/auth/personal/confirm/${props.uuid}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value }),
     })
-    if (res.ok) {
-      window.location.href = '/'
+    const data = await res.json()
+
+    if (res.ok && data.success) {
+      authStore.setUser(data.user)
+      router.push('/')
     } else {
-      const text = await res.text()
-      error.value = text || 'Invalid or expired login link'
+      error.value = data.error || 'Invalid or expired login link'
     }
   } catch {
-    error.value = 'An error occurred'
+    error.value = 'An error occurred while confirming login'
   } finally {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  confirmLogin()
+})
 </script>
 
 <template>
@@ -51,26 +53,22 @@ async function submit() {
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <form @submit.prevent="submit" class="space-y-4">
-        <Alert v-if="error" variant="destructive">
+      <div v-if="loading" class="flex items-center justify-center gap-2 py-4">
+        <Loader2 class="h-5 w-5 animate-spin" />
+        <span class="text-muted-foreground">Confirming login...</span>
+      </div>
+
+      <div v-else-if="error" class="space-y-4">
+        <Alert variant="destructive">
           <AlertDescription>{{ error }}</AlertDescription>
         </Alert>
-
-        <div class="space-y-2">
-          <Label for="password">One-time password</Label>
-          <Input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="Enter the password from your login link"
-            :disabled="loading"
-          />
-        </div>
-
-        <Button type="submit" class="w-full" :disabled="loading">
-          {{ loading ? 'Logging in...' : 'Log In' }}
+        <Button variant="outline" class="w-full" @click="confirmLogin">
+          Try Again
         </Button>
-      </form>
+        <Button variant="ghost" class="w-full" @click="router.push('/')">
+          Back to Home
+        </Button>
+      </div>
     </CardContent>
   </Card>
 </template>

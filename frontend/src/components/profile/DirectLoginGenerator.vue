@@ -55,8 +55,8 @@ async function copyToClipboard(text: string) {
               <Copy v-else class="h-4 w-4" />
             </Button>
           </div>
-          <p class="text-xs"><strong>Password:</strong> {{ result.password }}</p>
-          <p class="text-xs text-muted-foreground">This link can only be used once.</p>
+          <p v-if="result.password" class="text-xs"><strong>Password:</strong> {{ result.password }}</p>
+          <p class="text-xs text-muted-foreground">This link can only be used once and expires in 15 minutes.</p>
         </AlertDescription>
       </Alert>
     </CardContent>

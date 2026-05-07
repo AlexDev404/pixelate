@@ -11,7 +11,7 @@ export function useEditor() {
     store.setProject(slug)
     const listing = await backendAdapter.getDirListing(slug)
     store.setDirListing(listing)
-    store.previewUrl = `/api/projects/${slug}/preview/`
+    store.previewUrl = `//${slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`
   }
 
   async function openFile(filename: string) {
@@ -53,18 +53,16 @@ export function useEditor() {
 
   async function formatFile(filename: string) {
     const result = await backendAdapter.formatFile(store.projectSlug, filename)
-    if (result.formatted) {
-      // Reload file content
-      const res = await backendAdapter.getFileContent(store.projectSlug, filename)
-      const content = await res.text()
-      store.openFile(filename, content)
+    if (result.content != null) {
+      // Update editor with formatted content directly
+      store.openFile(filename, result.content)
       store.markClean(filename)
     }
     return result
   }
 
-  async function uploadFile(filename: string, formData: FormData) {
-    await backendAdapter.uploadFile(store.projectSlug, filename, formData)
+  async function uploadFile(filename: string, data: ArrayBuffer | Blob) {
+    await backendAdapter.uploadFile(store.projectSlug, filename, data)
     store.addFileToTree(filename)
   }
 

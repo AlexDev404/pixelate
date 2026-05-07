@@ -12,7 +12,7 @@ export function useWebSocket(projectSlug: string) {
 
   function connect() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${window.location.host}/api/projects/${projectSlug}/ws`
+    const url = `${protocol}//${window.location.host}/ws/${projectSlug}`
 
     ws.value = new WebSocket(url)
 

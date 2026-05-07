@@ -9,12 +9,14 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { UserPlus } from 'lucide-vue-next'
 
-const { providers, loginWith } = useAuth()
+const { providers } = useAuth()
 
 const username = ref('')
 const selectedProvider = ref('')
 const error = ref('')
 const checking = ref(false)
+const magicLinkSent = ref(false)
+const magicLinkUrl = ref('')
 
 async function signup() {
   if (!username.value.trim()) {
@@ -35,8 +37,29 @@ async function signup() {
       error.value = 'Username is already taken'
       return
     }
-    // Redirect to auth with username param
-    window.location.href = `/auth/${selectedProvider.value}?username=${encodeURIComponent(username.value)}`
+
+    if (selectedProvider.value === 'personal') {
+      // Magic link flow: reserve username via POST to signup endpoint,
+      // then the backend creates a magic link token
+      const res = await fetch(`/api/v1/users/signup/${encodeURIComponent(username.value)}/personal`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        error.value = data.error || 'Signup failed'
+        return
+      }
+
+      // In dev mode, the backend may return a direct login link
+      if (data.link) {
+        magicLinkUrl.value = data.link
+      }
+      magicLinkSent.value = true
+    } else {
+      // OAuth flow: redirect to auth provider with username in query
+      window.location.href = `/auth/${selectedProvider.value}?username=${encodeURIComponent(username.value)}`
+    }
   } catch (e: any) {
     error.value = e.message || 'An error occurred'
   } finally {
@@ -54,7 +77,21 @@ async function signup() {
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <form @submit.prevent="signup" class="space-y-4">
+      <!-- Magic link sent confirmation -->
+      <div v-if="magicLinkSent" class="space-y-4">
+        <Alert>
+          <AlertDescription>
+            Account created! Check your email for a login link.
+          </AlertDescription>
+        </Alert>
+        <div v-if="magicLinkUrl" class="space-y-2">
+          <p class="text-sm text-muted-foreground">Development mode - direct login link:</p>
+          <a :href="magicLinkUrl" class="text-sm text-primary underline break-all">{{ magicLinkUrl }}</a>
+        </div>
+      </div>
+
+      <!-- Signup form -->
+      <form v-else @submit.prevent="signup" class="space-y-4">
         <Alert v-if="error" variant="destructive">
           <AlertDescription>{{ error }}</AlertDescription>
         </Alert>

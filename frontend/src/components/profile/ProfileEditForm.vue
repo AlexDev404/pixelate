@@ -31,9 +31,9 @@ async function save() {
   loading.value = true
   error.value = ''
   try {
-    const formData = new FormData()
-    formData.append('links', JSON.stringify(editLinks.value.filter((l) => l.label && l.url)))
-    await backendAdapter.updateUserProfile(props.username, formData)
+    await backendAdapter.updateUserProfile(props.username, {
+      links: editLinks.value.filter((l) => l.label && l.url),
+    })
     emit('saved')
   } catch (e: any) {
     error.value = e.message

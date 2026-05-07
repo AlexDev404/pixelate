@@ -106,11 +106,44 @@ userRoutes.get('/signup/:username', async (c) => {
   return c.json(result);
 });
 
-// Reserve username and redirect
+// Reserve username and complete signup
 userRoutes.post('/signup/:username/:service', async (c) => {
   const username = c.req.param('username');
   const service = c.req.param('service');
 
+  // Magic link signup: create user and return a login link directly
+  if (service === 'personal') {
+    try {
+      const { createMagicLink } = await import('../auth/strategies.js');
+
+      const user = await createUser({
+        name: username,
+        service: 'personal',
+        serviceId: `personal-${Date.now()}`,
+      });
+
+      const uuid = createMagicLink(user.id);
+      const link = `/login/${uuid}`;
+
+      // Log the user in immediately via session
+      const sessionId = ensureSession(c);
+      const session = getSession(sessionId)!;
+      session.userId = user.id;
+      session.username = user.name;
+      session.isAdmin = false;
+
+      // In dev mode return the link; in production it would be emailed
+      if (env.NODE_ENV === 'development') {
+        return c.json({ success: true, user: { id: user.id, name: user.name }, link });
+      }
+
+      return c.json({ success: true, user: { id: user.id, name: user.name } });
+    } catch (err) {
+      return c.json({ error: String(err) }, 400);
+    }
+  }
+
+  // OAuth signup: requires a pending signup from OAuth callback
   const sessionId = getCookie(c, SESSION_COOKIE);
   if (!sessionId) return c.json({ error: 'No session' }, 400);
 

@@ -163,13 +163,22 @@ auth.get('/logout', async (c) => {
 
 // Generate magic link
 auth.post('/personal/link', async (c) => {
-  const body = await c.req.json<{ userId?: number; username?: string }>();
+  const body = await c.req.json<{ userId?: number; username?: string }>().catch(() => ({}));
 
   let user;
   if (body.userId) {
     user = await userService.findById(body.userId);
   } else if (body.username) {
     user = await userService.findByName(body.username);
+  } else {
+    // Fallback: use the logged-in session user
+    const sessionId = getCookie(c, SESSION_COOKIE);
+    if (sessionId) {
+      const session = getSession(sessionId);
+      if (session?.userId) {
+        user = await userService.findById(session.userId);
+      }
+    }
   }
 
   if (!user) {
@@ -177,7 +186,7 @@ auth.post('/personal/link', async (c) => {
   }
 
   const uuid = createMagicLink(user.id);
-  const link = `${env.BASE_URL}/auth/personal/confirm/${uuid}`;
+  const link = `/login/${uuid}`;
 
   // In production, email this link. In dev, return it.
   if (env.NODE_ENV === 'development') {

@@ -16,7 +16,7 @@ export interface BackendAdapter {
   getMainPageData(): Promise<MainPageData>
   deleteProject(slug: string): Promise<void>
   downloadProject(slug: string): void
-  getProjectHealth(slug: string): Promise<string>
+  getProjectHealth(slug: string): Promise<{ healthy: boolean; message?: string }>
   getProjectHistory(slug: string, commit?: string): Promise<ProjectHistoryEntry[]>
   getProjectLogs(slug: string, since?: string): Promise<any>
   remixProject(slug: string, newName?: string): Promise<void>
@@ -29,15 +29,15 @@ export interface BackendAdapter {
   createFile(slug: string, filename: string): Promise<void>
   deleteFile(slug: string, filename: string): Promise<void>
   getDirListing(slug: string): Promise<DirListing>
-  formatFile(slug: string, filename: string): Promise<{ formatted: boolean }>
+  formatFile(slug: string, filename: string): Promise<{ content: string }>
   getFileHistory(slug: string, filename: string): Promise<FileHistoryEntry[]>
   syncFile(slug: string, filename: string, changes: string): Promise<string>
   renameFile(slug: string, oldPath: string, newPath: string): Promise<void>
-  uploadFile(slug: string, filename: string, formData: FormData): Promise<void>
+  uploadFile(slug: string, filename: string, data: ArrayBuffer | Blob): Promise<void>
 
   // Users
   getUserProfile(username: string): Promise<UserProfile>
-  updateUserProfile(username: string, data: FormData): Promise<void>
+  updateUserProfile(username: string, data: Record<string, unknown>): Promise<void>
   checkUsernameAvailable(username: string): Promise<boolean>
   getUserSettings(uid: number): Promise<any>
   generateLoginLink(): Promise<{ url: string; password: string }>

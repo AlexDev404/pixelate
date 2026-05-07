@@ -50,9 +50,11 @@ export const backendAdapter: BackendAdapter = {
   },
 
   // Backend: GET /api/v1/projects/health/:project
+  // Backend returns JSON health status object
   async getProjectHealth(slug) {
-    const res = await fetch(`/api/v1/projects/health/${slug}`)
-    return res.text()
+    return json<{ healthy: boolean; message?: string }>(
+      await fetch(`/api/v1/projects/health/${slug}`),
+    )
   },
 
   // Backend: GET /api/v1/projects/history/:project/:commit?
@@ -129,8 +131,9 @@ export const backendAdapter: BackendAdapter = {
   },
 
   // Backend: POST /api/v1/files/format/:project/:filename+
+  // Backend returns { content: string }
   async formatFile(slug, filename) {
-    return json<{ formatted: boolean }>(
+    return json<{ content: string }>(
       await fetch(`/api/v1/files/format/${slug}/${filename}`, {
         method: 'POST',
       }),
@@ -138,18 +141,20 @@ export const backendAdapter: BackendAdapter = {
   },
 
   // Backend: GET /api/v1/files/history/:project/:filename+
+  // Backend returns { history: FileHistoryEntry[] }
   async getFileHistory(slug, filename) {
-    return json<FileHistoryEntry[]>(
+    const data = await json<{ history: FileHistoryEntry[] }>(
       await fetch(`/api/v1/files/history/${slug}/${filename}`),
     )
+    return data.history
   },
 
   // Backend: POST /api/v1/files/sync/:project/:filename+
   async syncFile(slug, filename, changes) {
     const res = await fetch(`/api/v1/files/sync/${slug}/${filename}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: changes,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patch: changes }),
     })
     return res.text()
   },
@@ -166,11 +171,12 @@ export const backendAdapter: BackendAdapter = {
   },
 
   // Backend: POST /api/v1/files/upload/:project/:filename+
-  async uploadFile(slug, filename, formData) {
+  // Backend expects raw bytes (arrayBuffer), not multipart form-data
+  async uploadFile(slug, filename, data) {
     await ok(
       await fetch(`/api/v1/files/upload/${slug}/${filename}`, {
         method: 'POST',
-        body: formData,
+        body: data,
       }),
     )
   },
@@ -182,11 +188,13 @@ export const backendAdapter: BackendAdapter = {
   },
 
   // Backend: POST /api/v1/users/profile/:user
+  // Backend expects JSON body
   async updateUserProfile(username, data) {
     await ok(
       await fetch(`/api/v1/users/profile/${username}`, {
         method: 'POST',
-        body: data,
+        headers: { 'Content-Type': 'application/json' },
+        body: typeof data === 'string' ? data : JSON.stringify(data),
       }),
     )
   },
@@ -204,10 +212,16 @@ export const backendAdapter: BackendAdapter = {
   },
 
   // Backend: POST /auth/personal/link
+  // Backend returns { link: string } in dev mode, { message: string } in prod
   async generateLoginLink() {
-    return json<{ url: string; password: string }>(
-      await fetch('/auth/personal/link', { method: 'POST' }),
+    const data = await json<{ link?: string; message?: string }>(
+      await fetch('/auth/personal/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }),
     )
+    return { url: data.link || '', password: '' }
   },
 
   // ── Admin (mounted at /api/v1/admin) ──────────────────
