@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@pixelate/types": ["../types/src"]
+    }
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../types" }
+  ]
+}

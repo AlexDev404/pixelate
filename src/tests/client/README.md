@@ -1,1 +1,0 @@
-This folder houses all the unit and integration tests for the client code

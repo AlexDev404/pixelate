@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: pixelate
+      POSTGRES_PASSWORD: pixelate
+      POSTGRES_DB: pixelate
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./backend/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      WEB_EDITOR_HOSTNAME: ${WEB_EDITOR_HOSTNAME:-localhost:5173}
+      WEB_EDITOR_APPS_HOSTNAME: ${WEB_EDITOR_APPS_HOSTNAME:-apps.localhost}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
