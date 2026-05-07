@@ -8,6 +8,7 @@ import {
   getSession,
   createSession,
   destroySession,
+  getAvailableProviders,
   SESSION_COOKIE,
   SESSION_MAX_AGE,
 } from '../auth/index.js';
@@ -16,6 +17,11 @@ import { ensureSession } from '../middleware/auth.js';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 
 const auth = new Hono();
+
+// Available auth providers (public)
+auth.get('/providers', (c) => {
+  return c.json(getAvailableProviders());
+});
 
 // Initiate OAuth login
 auth.get('/:provider', async (c) => {

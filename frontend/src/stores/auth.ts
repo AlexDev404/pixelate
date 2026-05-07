@@ -15,6 +15,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = u
   }
 
+  function setProviders(p: AuthProvider[]) {
+    providers.value = p
+  }
+
   async function fetchProviders() {
     try {
       providers.value = await backendAdapter.getAuthProviders()
@@ -40,6 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     setUser,
+    setProviders,
     fetchProviders,
     logout,
   }

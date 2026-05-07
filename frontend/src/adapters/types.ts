@@ -1,9 +1,10 @@
-import type { User, Project, ProjectSettings } from '@pixelate/types'
+import type { AuthProvider, Project, User } from '@pixelate/types'
 
 export interface MainPageData {
   user: User | null
   projects: Project[]
   starters: Project[]
+  providers: AuthProvider[]
 }
 
 export interface AdminData {

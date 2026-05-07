@@ -17,6 +17,9 @@ export const useProjectsStore = defineStore('projects', () => {
       const data = await backendAdapter.getMainPageData()
       const authStore = useAuthStore()
       authStore.setUser(data.user)
+      if (data.providers) {
+        authStore.setProviders(data.providers)
+      }
       projects.value = data.projects
       starters.value = data.starters
     } catch (e: any) {
