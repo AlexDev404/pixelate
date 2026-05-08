@@ -11,11 +11,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEditor } from "@/composables/useEditor";
 import { useWebSocket } from "@/composables/useWebSocket";
-import { Loader2, Wifi, WifiOff } from "lucide-vue-next";
-import { onMounted, ref } from "vue";
+import { Loader2, Wifi, WifiOff, AlertTriangle, ChevronRight, ChevronDown } from "lucide-vue-next";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 
 const route = useRoute();
@@ -42,6 +41,15 @@ const bottomTab = ref<"terminal" | "logs">("terminal");
 const loading = ref(true);
 const loadingStatus = ref("Loading project...");
 const loadError = ref("");
+
+const parsedError = computed(() => {
+  if (!loadError.value) return null;
+  try {
+    return JSON.parse(loadError.value);
+  } catch {
+    return loadError.value;
+  }
+});
 
 const { connected, connect, send, on } = useWebSocket(projectSlug);
 
@@ -134,9 +142,6 @@ async function handleRefreshTree() {
       >
         <span class="font-medium">{{ projectSlug }}</span>
         <div class="flex items-center gap-2">
-          <Badge v-if="loadError" variant="destructive" class="text-xs py-0">
-            {{ loadError }}
-          </Badge>
           <Badge v-if="connected" variant="default" class="gap-1 text-xs py-0">
             <Wifi class="h-3 w-3" /> Connected
           </Badge>
@@ -164,7 +169,21 @@ async function handleRefreshTree() {
         <template #center>
           <ResizablePanelGroup direction="vertical" class="h-full">
             <ResizablePanel :default-size="70" :min-size="20">
-              <EditorPane @saved="previewPane?.refreshAfterSave()" />
+              <div
+                v-if="loadError"
+                class="flex h-full flex-col items-center justify-center p-8"
+              >
+                <div class="w-full max-w-lg rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                  <div class="flex items-center gap-2 mb-3">
+                    <AlertTriangle class="h-5 w-5 text-destructive" />
+                    <span class="font-semibold text-destructive text-sm">Error Loading Project</span>
+                  </div>
+                  <div class="rounded border bg-background font-mono text-xs">
+                    <ErrorNode :value="parsedError" :depth="0" :expanded-default="true" />
+                  </div>
+                </div>
+              </div>
+              <EditorPane v-else @saved="previewPane?.refreshAfterSave()" />
             </ResizablePanel>
             <ResizableHandle with-handle />
             <ResizablePanel :default-size="30" :min-size="10">
@@ -212,16 +231,77 @@ async function handleRefreshTree() {
         </template>
 
         <template #right>
-          <Tabs default-value="preview" class="h-full flex flex-col">
-            <TabsList class="w-full rounded-none border-b">
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
-            <TabsContent value="preview" class="flex-1 min-h-0 mt-0">
-              <PreviewPane ref="previewPane" :url="previewUrl" />
-            </TabsContent>
-          </Tabs>
+          <PreviewPane ref="previewPane" :url="previewUrl" />
         </template>
       </ThreeColumnLayout>
     </template>
   </div>
 </template>
+
+<script lang="ts">
+import { defineComponent, h, ref } from 'vue'
+import { ChevronRight, ChevronDown } from 'lucide-vue-next'
+
+const ErrorNode = defineComponent({
+  name: 'ErrorNode',
+  props: {
+    label: { type: String, default: '' },
+    value: { type: [String, Number, Boolean, Object, Array], default: null },
+    depth: { type: Number, default: 0 },
+    expandedDefault: { type: Boolean, default: false },
+  },
+  setup(props) {
+    const expanded = ref(props.expandedDefault)
+    const paddingLeft = `${props.depth * 16 + 8}px`
+
+    return () => {
+      const val = props.value
+
+      // Null / undefined
+      if (val === null || val === undefined) {
+        return h('div', { class: 'flex items-center py-1 px-2', style: { paddingLeft } }, [
+          props.label ? h('span', { class: 'text-muted-foreground mr-1' }, `${props.label}:`) : null,
+          h('span', { class: 'text-muted-foreground italic' }, 'null'),
+        ])
+      }
+
+      // Primitive
+      if (typeof val !== 'object') {
+        const colorClass = typeof val === 'string' ? 'text-green-600 dark:text-green-400'
+          : typeof val === 'number' ? 'text-blue-600 dark:text-blue-400'
+          : typeof val === 'boolean' ? 'text-purple-600 dark:text-purple-400'
+          : 'text-foreground'
+        const displayVal = typeof val === 'string' ? `"${val}"` : String(val)
+        return h('div', { class: 'flex items-baseline py-0.5 px-2 hover:bg-muted/50', style: { paddingLeft } }, [
+          props.label ? h('span', { class: 'text-muted-foreground mr-1 shrink-0' }, `${props.label}:`) : null,
+          h('span', { class: `${colorClass} break-all` }, displayVal),
+        ])
+      }
+
+      // Object or Array
+      const isArray = Array.isArray(val)
+      const entries = isArray
+        ? (val as any[]).map((v, i) => [String(i), v])
+        : Object.entries(val as Record<string, any>)
+      const preview = isArray ? `Array(${entries.length})` : `{${entries.length}}`
+
+      return h('div', [
+        h('div', {
+          class: 'flex items-center py-0.5 px-2 cursor-pointer hover:bg-muted/50 select-none',
+          style: { paddingLeft },
+          onClick: () => { expanded.value = !expanded.value },
+        }, [
+          h(expanded.value ? ChevronDown : ChevronRight, { class: 'h-3 w-3 shrink-0 text-muted-foreground mr-1' }),
+          props.label ? h('span', { class: 'text-muted-foreground mr-1' }, `${props.label}:`) : null,
+          !expanded.value ? h('span', { class: 'text-muted-foreground text-[10px]' }, preview) : null,
+        ]),
+        expanded.value
+          ? entries.map(([key, childVal]) =>
+              h(ErrorNode, { label: key, value: childVal, depth: props.depth + 1, expandedDefault: props.depth < 1 })
+            )
+          : null,
+      ])
+    }
+  },
+})
+</script>

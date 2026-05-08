@@ -1,9 +1,9 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { env } from '../../lib/env.js';
-import { execAsync, projectDir } from '../../lib/helpers.js';
-import { updateCaddyRoute } from '../../services/caddy.service.js';
-import { projectService } from '../../services/project.service.js';
+import fs from "fs/promises";
+import path from "path";
+import { env } from "../../lib/env.js";
+import { execAsync, projectDir } from "../../lib/helpers.js";
+import { updateCaddyRoute } from "../../services/caddy.service.js";
+import { projectService } from "../../services/project.service.js";
 
 interface RestartProjectInput {
   projectId: number;
@@ -24,23 +24,25 @@ async function allocatePort(): Promise<number> {
   return port;
 }
 
-async function getContainerStatus(containerName: string): Promise<'running' | 'stopped' | 'none'> {
+async function getContainerStatus(
+  containerName: string,
+): Promise<"running" | "stopped" | "none"> {
   try {
     const { stdout } = await execAsync(
-      `docker inspect --format={{.State.Status}} ${containerName}`
+      `docker inspect --format={{.State.Status}} ${containerName}`,
     );
-    const status = stdout.trim().replace(/'/g, '');
-    if (status === 'running') return 'running';
-    return 'stopped';
+    const status = stdout.trim().replace(/'/g, "");
+    if (status === "running") return "running";
+    return "stopped";
   } catch {
-    return 'none';
+    return "none";
   }
 }
 
 async function getContainerPort(containerName: string): Promise<number | null> {
   try {
     const { stdout } = await execAsync(
-      `docker inspect --format={{range .Config.Env}}{{println .}}{{end}} ${containerName}`
+      `docker inspect --format={{range .Config.Env}}{{println .}}{{end}} ${containerName}`,
     );
     const match = stdout.match(/^PORT=(\d+)$/m);
     return match ? parseInt(match[1], 10) : null;
@@ -51,7 +53,7 @@ async function getContainerPort(containerName: string): Promise<number | null> {
 
 export async function restartProject(input: RestartProjectInput) {
   const project = await projectService.findById(input.projectId);
-  if (!project) throw new Error('Project not found');
+  if (!project) throw new Error("Project not found");
 
   const containerName = `pixelate-${project.slug}`;
 
@@ -61,7 +63,7 @@ export async function restartProject(input: RestartProjectInput) {
     const status = await getContainerStatus(containerName);
 
     // Container is already running
-    if (status === 'running') {
+    if (status === "running") {
       const existingPort = await getContainerPort(containerName);
       if (existingPort) {
         await updateCaddyRoute(project.slug, existingPort);
@@ -70,13 +72,17 @@ export async function restartProject(input: RestartProjectInput) {
     }
 
     // Container exists but is stopped — try to start it
-    if (status === 'stopped') {
+    if (status === "stopped") {
       try {
         await execAsync(`docker start ${containerName}`);
         const existingPort = await getContainerPort(containerName);
         if (existingPort) {
           await updateCaddyRoute(project.slug, existingPort);
-          return { success: true, container: containerName, port: existingPort };
+          return {
+            success: true,
+            container: containerName,
+            port: existingPort,
+          };
         }
       } catch {
         // Start failed, fall through to recreate
@@ -93,23 +99,23 @@ export async function restartProject(input: RestartProjectInput) {
     // Start new container
     const settings = await projectService.getSettings(project.id);
     const dir = projectDir(project.slug);
-    const runScript = settings?.run_script || 'npm start';
+    const runScript = settings?.run_script || "npm start";
     const envVars = settings?.env_vars
       ? settings.env_vars
-          .split('\n')
+          .split("\n")
           .filter(Boolean)
           .map((e) => `-e ${e}`)
-          .join(' ')
-      : '';
+          .join(" ")
+      : "";
 
     // Write a startup script to avoid shell quoting issues
     const entrypoint = [
-      '#!/bin/sh',
-      'set -e',
-      'if [ -f package.json ]; then rm -rf node_modules && npm install; fi',
+      "#!/bin/sh",
+      "set -e",
+      "if [ -f package.json ]; then rm -rf node_modules && npm install; fi",
       runScript,
-    ].join('\n');
-    const entrypointPath = path.join(dir, '.pixelate-start.sh');
+    ].join("\n");
+    const entrypointPath = path.join(dir, ".pixelate-start.sh");
     await fs.writeFile(entrypointPath, entrypoint, { mode: 0o755 });
 
     await execAsync(
@@ -119,8 +125,19 @@ export async function restartProject(input: RestartProjectInput) {
         `-p ${port}:${port} ` +
         `-e PORT=${port} ` +
         `${envVars} ` +
-        `node:20-alpine sh /app/.pixelate-start.sh`
-    );
+        `node:20-alpine sh /app/.pixelate-start.sh`,
+    ).catch(async (_) => {
+      // Try to recreate on failure, in case of transient issues
+      await execAsync(`docker rm -f ${containerName}`);
+      return await execAsync(
+        `docker run -d --name ${containerName} ` +
+        `--network ${env.DOCKER_NETWORK} ` +
+        `-v "${dir}":/app -w /app ` +
+        `-p ${port}:${port} ` +
+        `-e PORT=${port} ` +
+        `${envVars} ` +
+        `node:20-alpine sh /app/.pixelate-start.sh`);
+    });
 
     // Register port binding so health check can return it
     await updateCaddyRoute(project.slug, port);
