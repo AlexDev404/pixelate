@@ -22,6 +22,7 @@
     "hono": "^4.6.0",
     "marked": "^14.1.0",
     "mime": "^4.0.4",
+    "node-pty": "^1.1.0",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",

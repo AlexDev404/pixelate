@@ -1,5 +1,5 @@
-import { useEditorStore } from '@/stores/editor'
 import { backendAdapter } from '@/adapters/backend.adapter'
+import { useEditorStore } from '@/stores/editor'
 import { storeToRefs } from 'pinia'
 
 export function useEditor() {
@@ -11,29 +11,36 @@ export function useEditor() {
     store.setProject(slug)
     const listing = await backendAdapter.getDirListing(slug)
     store.setDirListing(listing)
-    // In production, use subdomain-based preview
-    // In dev, use port-based preview from health endpoint
+  }
+
+  async function ensureContainer(slug: string): Promise<{ healthy: boolean; port?: number }> {
     const isDev = import.meta.env.DEV
-    if (isDev) {
-      store.previewUrl = '' // will be set when health check returns a port
-      try {
-        let health = await backendAdapter.getProjectHealth(slug)
-        // Auto-start container if not running
-        if (!health.healthy) {
-          await backendAdapter.restartProject(slug)
-          // Wait a moment for container to start, then re-check
-          await new Promise((r) => setTimeout(r, 2000))
-          health = await backendAdapter.getProjectHealth(slug)
-        }
+    if (!isDev) {
+      store.previewUrl = `//${slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`
+      return { healthy: true }
+    }
+
+    store.previewUrl = ''
+    let health = await backendAdapter.getProjectHealth(slug)
+
+    // Auto-start container if not running
+    if (!health.healthy) {
+      await backendAdapter.restartProject(slug)
+    }
+
+    // Poll until healthy (max ~30s)
+    for (let i = 0; i < 15; i++) {
+      health = await backendAdapter.getProjectHealth(slug)
+      if (health.healthy) {
         if (health.port) {
           store.previewUrl = `//localhost:${health.port}`
         }
-      } catch {
-        // No preview available yet
+        return health
       }
-    } else {
-      store.previewUrl = `//${slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`
+      await new Promise((r) => setTimeout(r, 2500))
     }
+
+    return health
   }
 
   async function openFile(filename: string) {
@@ -97,6 +104,7 @@ export function useEditor() {
     projectSlug,
     previewUrl,
     loadProject,
+    ensureContainer,
     openFile,
     closeFile,
     createFile,

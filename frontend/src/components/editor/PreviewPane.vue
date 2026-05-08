@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
-import { Button } from '@/components/ui/button'
-import { RefreshCw, ExternalLink } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button';
+import { ExternalLink, RefreshCw } from 'lucide-vue-next';
+import { onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{
   url: string
@@ -34,7 +34,7 @@ onUnmounted(() => {
   if (saveRefreshTimer) clearTimeout(saveRefreshTimer)
 })
 
-defineExpose({ refreshAfterSave })
+defineExpose({ refreshAfterSave, refresh })
 </script>
 
 <template>
