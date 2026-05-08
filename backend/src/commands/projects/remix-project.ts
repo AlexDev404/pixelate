@@ -1,4 +1,5 @@
 import { projectService } from '../../services/project.service.js';
+import { restartProject } from './restart-project.js';
 
 interface RemixProjectInput {
   originalId: number;
@@ -17,5 +18,14 @@ export async function remixProject(input: RemixProjectInput) {
     throw new Error('A project with this name already exists');
   }
 
-  return projectService.remixProject(originalId, newName, userId);
+  const newProject = await projectService.remixProject(originalId, newName, userId);
+
+  // Start the container for the new project
+  try {
+    await restartProject({ projectId: newProject.id });
+  } catch (err) {
+    console.warn(`Failed to start container for remixed project ${newProject.slug}:`, err);
+  }
+
+  return newProject;
 }

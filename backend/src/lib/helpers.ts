@@ -16,7 +16,7 @@ export function slugify(text: string): string {
 }
 
 export function projectDir(slug: string): string {
-  return path.join(env.PROJECT_DIR, slug);
+  return path.resolve(env.PROJECT_DIR, slug);
 }
 
 export function filePath(slug: string, filename: string): string {

@@ -29,6 +29,7 @@ const {
 } = useEditor()
 
 const logViewer = ref<InstanceType<typeof LogViewer>>()
+const previewPane = ref<InstanceType<typeof PreviewPane>>()
 
 const { connected, connect, send, on } = useWebSocket(projectSlug)
 
@@ -102,7 +103,7 @@ function handleUploadFile(filename: string, formData: FormData) {
       <template #center>
         <div class="flex h-full flex-col">
           <div class="flex-1 min-h-0">
-            <EditorPane />
+            <EditorPane @saved="previewPane?.refreshAfterSave()" />
           </div>
           <div class="h-48 border-t">
             <LogViewer ref="logViewer" />
@@ -116,7 +117,7 @@ function handleUploadFile(filename: string, formData: FormData) {
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
           <TabsContent value="preview" class="flex-1 min-h-0 mt-0">
-            <PreviewPane :url="previewUrl" />
+            <PreviewPane ref="previewPane" :url="previewUrl" />
           </TabsContent>
         </Tabs>
       </template>

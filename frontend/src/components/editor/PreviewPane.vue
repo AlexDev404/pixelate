@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, ExternalLink } from 'lucide-vue-next'
 
@@ -9,9 +9,17 @@ const props = defineProps<{
 
 const iframeRef = ref<HTMLIFrameElement>()
 const iframeKey = ref(0)
+let saveRefreshTimer: ReturnType<typeof setTimeout> | null = null
 
 function refresh() {
   iframeKey.value++
+}
+
+function refreshAfterSave() {
+  if (saveRefreshTimer) clearTimeout(saveRefreshTimer)
+  saveRefreshTimer = setTimeout(() => {
+    refresh()
+  }, 2000)
 }
 
 function openExternal() {
@@ -21,6 +29,12 @@ function openExternal() {
 watch(() => props.url, () => {
   iframeKey.value++
 })
+
+onUnmounted(() => {
+  if (saveRefreshTimer) clearTimeout(saveRefreshTimer)
+})
+
+defineExpose({ refreshAfterSave })
 </script>
 
 <template>

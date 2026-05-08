@@ -5,6 +5,10 @@ import { useEditor } from '@/composables/useEditor'
 
 const { tabs, activeFile, activeTab, openFile, closeFile, updateContent, syncFile } = useEditor()
 
+const emit = defineEmits<{
+  saved: []
+}>()
+
 function onSelect(filename: string) {
   openFile(filename)
 }
@@ -22,6 +26,7 @@ function onChange(value: string) {
 function onSave() {
   if (activeFile.value && activeTab.value) {
     syncFile(activeFile.value, activeTab.value.content)
+    emit('saved')
   }
 }
 

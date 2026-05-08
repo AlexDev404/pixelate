@@ -16,7 +16,7 @@ export async function checkProjectHealth(projectId: number): Promise<HealthStatu
     const { stdout } = await execAsync(
       `docker inspect --format='{{.State.Status}}' ${containerName}`
     );
-    const status = stdout.trim();
+    const status = stdout.trim().replace(/'/g, '');
     return {
       healthy: status === 'running',
       message: `Container status: ${status}`,

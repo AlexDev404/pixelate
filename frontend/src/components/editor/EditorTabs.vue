@@ -23,11 +23,11 @@ function basename(path: string) {
 <template>
   <ScrollArea class="w-full">
     <div class="flex h-9 items-center border-b bg-muted/40">
-      <button
+      <div
         v-for="tab in tabs"
         :key="tab.filename"
         :class="cn(
-          'group flex h-full items-center gap-1.5 border-r px-3 text-sm transition-colors',
+          'group flex h-full items-center gap-1.5 border-r px-3 text-sm transition-colors cursor-pointer',
           tab.filename === activeFile
             ? 'bg-background text-foreground'
             : 'text-muted-foreground hover:bg-background/50'
@@ -43,7 +43,7 @@ function basename(path: string) {
         >
           <X class="h-3 w-3" />
         </button>
-      </button>
+      </div>
     </div>
   </ScrollArea>
 </template>

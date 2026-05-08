@@ -17,7 +17,14 @@ export function useEditor() {
     if (isDev) {
       store.previewUrl = '' // will be set when health check returns a port
       try {
-        const health = await backendAdapter.getProjectHealth(slug)
+        let health = await backendAdapter.getProjectHealth(slug)
+        // Auto-start container if not running
+        if (!health.healthy) {
+          await backendAdapter.restartProject(slug)
+          // Wait a moment for container to start, then re-check
+          await new Promise((r) => setTimeout(r, 2000))
+          health = await backendAdapter.getProjectHealth(slug)
+        }
         if (health.port) {
           store.previewUrl = `//localhost:${health.port}`
         }

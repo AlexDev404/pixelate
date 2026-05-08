@@ -155,6 +155,13 @@ projectRoutes.get('/from-starter/:starter/:newname?', verifyLogin(), async (c) =
       await projectService.updateSettings(newProject.id, projSettings);
     }
 
+    // Start the container for the new project
+    try {
+      await restartProject({ projectId: newProject.id });
+    } catch (err) {
+      console.warn(`Failed to start container for new project ${newProject.slug}:`, err);
+    }
+
     return c.json(newProject);
   } catch (err) {
     return c.json({ error: String(err) }, 400);
