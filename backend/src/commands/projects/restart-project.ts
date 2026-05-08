@@ -2,6 +2,8 @@ import { execAsync, projectDir } from '../../lib/helpers.js';
 import { env } from '../../lib/env.js';
 import { projectService } from '../../services/project.service.js';
 import { updateCaddyRoute } from '../../services/caddy.service.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 interface RestartProjectInput {
   projectId: number;
@@ -50,6 +52,16 @@ export async function restartProject(input: RestartProjectInput) {
           .join(' ')
       : '';
 
+    // Write a startup script to avoid shell quoting issues
+    const entrypoint = [
+      '#!/bin/sh',
+      'set -e',
+      'if [ -f package.json ]; then rm -rf node_modules && npm install; fi',
+      runScript,
+    ].join('\n');
+    const entrypointPath = path.join(dir, '.pixelate-start.sh');
+    await fs.writeFile(entrypointPath, entrypoint, { mode: 0o755 });
+
     await execAsync(
       `docker run -d --name ${containerName} ` +
         `--network ${env.DOCKER_NETWORK} ` +
@@ -57,7 +69,7 @@ export async function restartProject(input: RestartProjectInput) {
         `-p ${port}:${port} ` +
         `-e PORT=${port} ` +
         `${envVars} ` +
-        `node:20-alpine sh -c "${runScript}"`
+        `node:20-alpine sh /app/.pixelate-start.sh`
     );
 
     // Register port binding so health check can return it
