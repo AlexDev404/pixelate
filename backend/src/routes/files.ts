@@ -12,8 +12,11 @@ fileRoutes.get('/content/:project/:filename{.+}', projectLookup(), async (c) => 
   const filename = c.req.param('filename');
 
   try {
-    const { content, mime } = await fileService.readFile(project.slug, filename);
-    return c.text(content, 200, { 'Content-Type': mime });
+    const { buffer, mime } = await fileService.readFileBinary(project.slug, filename);
+    return new Response(buffer, {
+      status: 200,
+      headers: { 'Content-Type': mime },
+    });
   } catch {
     return c.json({ error: 'File not found' }, 404);
   }

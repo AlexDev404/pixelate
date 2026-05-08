@@ -15,6 +15,7 @@ export const useEditorStore = defineStore('editor', () => {
   const dirListing = ref<DirListing>({ dirs: [], files: [] })
   const wsConnected = ref(false)
   const previewUrl = ref<string>('')
+  const uploading = ref(false)
 
   const activeTab = computed(() =>
     tabs.value.find((t) => t.filename === activeFile.value) || null
@@ -85,6 +86,7 @@ export const useEditorStore = defineStore('editor', () => {
     dirListing,
     wsConnected,
     previewUrl,
+    uploading,
     openFile,
     closeTab,
     updateContent,

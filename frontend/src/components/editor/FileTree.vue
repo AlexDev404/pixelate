@@ -10,8 +10,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { File, Folder, FolderOpen, Plus, MoreHorizontal, Trash2, Pencil, Upload } from 'lucide-vue-next'
+import { File, Folder, FolderOpen, Plus, MoreHorizontal, Trash2, Pencil, Upload, Loader2, RefreshCw } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
+import { useEditorStore } from '@/stores/editor'
+import { storeToRefs } from 'pinia'
+
+const editorStore = useEditorStore()
+const { uploading } = storeToRefs(editorStore)
 
 const props = defineProps<{
   dirListing: DirListing
@@ -24,6 +29,7 @@ const emit = defineEmits<{
   'delete-file': [filename: string]
   'rename-file': [oldPath: string, newPath: string]
   'upload-file': [filename: string, formData: FormData]
+  'refresh': []
 }>()
 
 const expandedDirs = ref<Set<string>>(new Set())
@@ -127,8 +133,14 @@ function handleUpload(event: Event) {
 <template>
   <div class="flex h-full flex-col">
     <div class="flex items-center justify-between border-b px-3 py-2">
-      <span class="text-xs font-semibold uppercase text-muted-foreground">Files</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold uppercase text-muted-foreground">Files</span>
+        <Loader2 v-if="uploading" class="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+      </div>
       <div class="flex items-center gap-1">
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="emit('refresh')" title="Refresh">
+          <RefreshCw class="h-3.5 w-3.5" />
+        </Button>
         <Button variant="ghost" size="icon" class="h-6 w-6" @click="showNewFile = !showNewFile">
           <Plus class="h-3.5 w-3.5" />
         </Button>

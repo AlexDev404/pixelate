@@ -93,7 +93,14 @@ function handleRenameFile(oldPath: string, newPath: string) {
 }
 
 function handleUploadFile(filename: string, formData: FormData) {
-  uploadFile(filename, formData)
+  const file = formData.get('file') as File | null
+  if (file) {
+    uploadFile(filename, file)
+  }
+}
+
+async function handleRefreshTree() {
+  await loadProject(projectSlug)
 }
 </script>
 
@@ -134,6 +141,7 @@ function handleUploadFile(filename: string, formData: FormData) {
             @delete-file="handleDeleteFile"
             @rename-file="handleRenameFile"
             @upload-file="handleUploadFile"
+            @refresh="handleRefreshTree"
           />
         </template>
 

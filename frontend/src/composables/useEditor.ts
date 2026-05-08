@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 
 export function useEditor() {
   const store = useEditorStore()
-  const { tabs, activeFile, activeTab, dirListing, wsConnected, projectSlug, previewUrl } =
+  const { tabs, activeFile, activeTab, dirListing, wsConnected, projectSlug, previewUrl, uploading } =
     storeToRefs(store)
 
   async function loadProject(slug: string) {
@@ -91,8 +91,13 @@ export function useEditor() {
   }
 
   async function uploadFile(filename: string, data: ArrayBuffer | Blob) {
-    await backendAdapter.uploadFile(store.projectSlug, filename, data)
-    store.addFileToTree(filename)
+    store.uploading = true
+    try {
+      await backendAdapter.uploadFile(store.projectSlug, filename, data)
+      store.addFileToTree(filename)
+    } finally {
+      store.uploading = false
+    }
   }
 
   return {
@@ -103,6 +108,7 @@ export function useEditor() {
     wsConnected,
     projectSlug,
     previewUrl,
+    uploading,
     loadProject,
     ensureContainer,
     openFile,

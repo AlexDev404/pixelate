@@ -1,13 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
 import EditorTabs from './EditorTabs.vue'
 import { useEditor } from '@/composables/useEditor'
 
-const { tabs, activeFile, activeTab, openFile, closeFile, updateContent, syncFile } = useEditor()
+const { tabs, activeFile, activeTab, projectSlug, openFile, closeFile, updateContent, syncFile } = useEditor()
 
 const emit = defineEmits<{
   saved: []
 }>()
+
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif'])
+
+const isImageFile = computed(() => {
+  if (!activeFile.value) return false
+  const ext = activeFile.value.split('.').pop()?.toLowerCase() || ''
+  return IMAGE_EXTENSIONS.has(ext)
+})
+
+const imageUrl = computed(() => {
+  if (!activeFile.value || !projectSlug.value) return ''
+  return `/api/v1/files/content/${projectSlug.value}/${activeFile.value}`
+})
 
 function onSelect(filename: string) {
   openFile(filename)
@@ -42,7 +56,15 @@ function onUpdate(value: string) {
     <EditorTabs :tabs="tabs" :active-file="activeFile" @select="onSelect" @close="onClose" />
     <div class="flex-1 min-h-0">
       <template v-if="activeTab">
+        <div v-if="isImageFile" class="flex h-full items-center justify-center bg-muted/20 p-4">
+          <img
+            :src="imageUrl"
+            :alt="activeTab.filename"
+            class="max-h-full max-w-full object-contain rounded shadow-sm"
+          />
+        </div>
         <CodeMirrorEditor
+          v-else
           :key="activeTab.filename"
           :model-value="activeTab.content"
           :filename="activeTab.filename"
