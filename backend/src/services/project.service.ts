@@ -188,7 +188,15 @@ export class ProjectService {
       access_level: AccessLevel.OWNER,
     });
 
-    await db.insert(projectSettings).values({ project_id: newProject.id });
+    // Copy settings from original project
+    const originalSettings = await db.query.projectSettings.findFirst({
+      where: eq(projectSettings.project_id, originalId),
+    });
+    await db.insert(projectSettings).values({
+      project_id: newProject.id,
+      ...(originalSettings?.run_script ? { run_script: originalSettings.run_script } : {}),
+      ...(originalSettings?.env_vars ? { env_vars: originalSettings.env_vars } : {}),
+    });
 
     // Record remix
     await db.insert(remix).values({

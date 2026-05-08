@@ -29,10 +29,24 @@ adminRoutes.get('/', async (c) => {
   });
 
   // Get running containers
-  let containers: string[] = [];
+  let containers: { image: string; project: string; status: string; created: string }[] = [];
   try {
-    const { stdout } = await execAsync('docker ps --format "{{.Names}}" --filter name=pixelate-');
-    containers = stdout.trim().split('\n').filter(Boolean);
+    const { stdout } = await execAsync(
+      'docker ps -a --format "{{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.CreatedAt}}" --filter name=pixelate-'
+    );
+    containers = stdout
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [name, image, status, created] = line.split('\t');
+        return {
+          image: name,
+          project: name.replace(/^pixelate-/, ''),
+          status,
+          created,
+        };
+      });
   } catch {
     // Docker may not be available
   }
@@ -43,6 +57,7 @@ adminRoutes.get('/', async (c) => {
     suspendedUsers: activeSuspensions,
     suspendedProjects: projectSuspensions,
     containers,
+    servers: [],
   });
 });
 

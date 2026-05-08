@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, shallowRef, onMounted } from 'vue'
 import { backendAdapter } from '@/adapters/backend.adapter'
 import type { AdminData } from '@/adapters/types'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import AdminUsers from '@/components/admin/AdminUsers.vue'
 import AdminProjects from '@/components/admin/AdminProjects.vue'
 import AdminContainers from '@/components/admin/AdminContainers.vue'
 import AdminServers from '@/components/admin/AdminServers.vue'
 import { Shield } from 'lucide-vue-next'
 
-const data = ref<AdminData | null>(null)
+const data = shallowRef<AdminData | null>(null)
 const loading = ref(true)
 const error = ref('')
+const activeTab = ref('users')
+
+const tabs = [
+  { value: 'users', label: 'Users' },
+  { value: 'projects', label: 'Projects' },
+  { value: 'containers', label: 'Containers' },
+  { value: 'servers', label: 'Servers' },
+]
 
 async function fetchData() {
   loading.value = true
@@ -44,26 +52,27 @@ onMounted(fetchData)
       <p class="text-muted-foreground mt-2">{{ error }}</p>
     </div>
 
-    <Tabs v-else-if="data" default-value="users">
-      <TabsList>
-        <TabsTrigger value="users">Users ({{ data.users.length }})</TabsTrigger>
-        <TabsTrigger value="projects">Projects ({{ data.projects.length }})</TabsTrigger>
-        <TabsTrigger value="containers">Containers ({{ data.containers.length }})</TabsTrigger>
-        <TabsTrigger value="servers">Servers ({{ data.servers.length }})</TabsTrigger>
-      </TabsList>
+    <div v-else-if="data">
+      <div class="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          :class="[
+            'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all',
+            activeTab === tab.value
+              ? 'bg-background text-foreground shadow-sm'
+              : 'hover:bg-background/50'
+          ]"
+          @click="activeTab = tab.value"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
 
-      <TabsContent value="users">
-        <AdminUsers :users="data.users" @refresh="fetchData" />
-      </TabsContent>
-      <TabsContent value="projects">
-        <AdminProjects :projects="data.projects" @refresh="fetchData" />
-      </TabsContent>
-      <TabsContent value="containers">
-        <AdminContainers :containers="data.containers" @refresh="fetchData" />
-      </TabsContent>
-      <TabsContent value="servers">
-        <AdminServers :servers="data.servers" @refresh="fetchData" />
-      </TabsContent>
-    </Tabs>
+      <AdminUsers v-if="activeTab === 'users'" :users="data.users" @refresh="fetchData" />
+      <AdminProjects v-if="activeTab === 'projects'" :projects="data.projects" @refresh="fetchData" />
+      <AdminContainers v-if="activeTab === 'containers'" :containers="data.containers" @refresh="fetchData" />
+      <AdminServers v-if="activeTab === 'servers'" :servers="data.servers" @refresh="fetchData" />
+    </div>
   </div>
 </template>
