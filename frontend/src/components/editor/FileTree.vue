@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { DirListing } from '@pixelate/types'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { File, Folder, FolderOpen, Plus, MoreHorizontal, Trash2, Pencil, Upload, Loader2, RefreshCw } from 'lucide-vue-next'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/stores/editor'
+import type { DirListing } from '@pixelate/types'
+import { File, Folder, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
+import { computed, ref } from 'vue'
 
 const editorStore = useEditorStore()
 const { uploading } = storeToRefs(editorStore)
@@ -164,7 +158,7 @@ function handleUpload(event: Event) {
       />
     </div>
 
-    <ScrollArea class="flex-1">
+    <ScrollArea class="flex-1 h-full">
       <div class="py-1">
         <template v-for="node in tree" :key="node.path">
           <FileTreeNode

@@ -41,14 +41,29 @@ async function getContainerStatus(
 
 async function getContainerPort(containerName: string): Promise<number | null> {
   try {
+    // Try reading PORT from env vars
     const { stdout } = await execAsync(
-      `docker inspect --format={{range .Config.Env}}{{println .}}{{end}} ${containerName}`,
+      `docker inspect --format="{{range .Config.Env}}{{println .}}{{end}}" ${containerName}`,
     );
     const match = stdout.match(/^PORT=(\d+)$/m);
-    return match ? parseInt(match[1], 10) : null;
+    if (match) return parseInt(match[1], 10);
   } catch {
-    return null;
+    // ignore
   }
+
+  try {
+    // Fallback: read published port from container config
+    const { stdout } = await execAsync(
+      `docker port ${containerName}`,
+    );
+    // Output like: 4100/tcp -> 0.0.0.0:4100
+    const match = stdout.match(/-> [\d.]+:(\d+)/);
+    if (match) return parseInt(match[1], 10);
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
 
 export async function restartProject(input: RestartProjectInput) {
@@ -69,6 +84,8 @@ export async function restartProject(input: RestartProjectInput) {
         await updateCaddyRoute(project.slug, existingPort);
         return { success: true, container: containerName, port: existingPort };
       }
+      // Running but can't determine port — don't destroy it, just report success without port
+      return { success: true, container: containerName, port: 0 };
     }
 
     // Container exists but is stopped — try to start it
@@ -84,6 +101,8 @@ export async function restartProject(input: RestartProjectInput) {
             port: existingPort,
           };
         }
+        // Started but can't determine port — don't destroy, report success
+        return { success: true, container: containerName, port: 0 };
       } catch {
         // Start failed, fall through to recreate
       }

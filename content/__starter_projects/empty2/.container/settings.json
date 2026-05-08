@@ -1,0 +1,6 @@
+{
+  "name": "Empty project with a run profile",
+  "description": "A completely empty project, with Node.js and Python preinstalled",
+  "run_script": "apk add python3\n# Essentially an empty project, just keep the container running\n# You can replace this with your own run instructions if needed\n# For now, it will just keep the container alive.\ntail -f /dev/null",
+  "app_type": "docker"
+}
