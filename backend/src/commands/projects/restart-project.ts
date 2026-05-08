@@ -1,9 +1,9 @@
-import { execAsync, projectDir } from '../../lib/helpers.js';
-import { env } from '../../lib/env.js';
-import { projectService } from '../../services/project.service.js';
-import { updateCaddyRoute } from '../../services/caddy.service.js';
 import fs from 'fs/promises';
 import path from 'path';
+import { env } from '../../lib/env.js';
+import { execAsync, projectDir } from '../../lib/helpers.js';
+import { updateCaddyRoute } from '../../services/caddy.service.js';
+import { projectService } from '../../services/project.service.js';
 
 interface RestartProjectInput {
   projectId: number;
@@ -24,6 +24,31 @@ async function allocatePort(): Promise<number> {
   return port;
 }
 
+async function getContainerStatus(containerName: string): Promise<'running' | 'stopped' | 'none'> {
+  try {
+    const { stdout } = await execAsync(
+      `docker inspect --format={{.State.Status}} ${containerName}`
+    );
+    const status = stdout.trim().replace(/'/g, '');
+    if (status === 'running') return 'running';
+    return 'stopped';
+  } catch {
+    return 'none';
+  }
+}
+
+async function getContainerPort(containerName: string): Promise<number | null> {
+  try {
+    const { stdout } = await execAsync(
+      `docker inspect --format={{range .Config.Env}}{{println .}}{{end}} ${containerName}`
+    );
+    const match = stdout.match(/^PORT=(\d+)$/m);
+    return match ? parseInt(match[1], 10) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function restartProject(input: RestartProjectInput) {
   const project = await projectService.findById(input.projectId);
   if (!project) throw new Error('Project not found');
@@ -33,7 +58,32 @@ export async function restartProject(input: RestartProjectInput) {
   try {
     await ensureNetwork();
 
-    // Stop existing container
+    const status = await getContainerStatus(containerName);
+
+    // Container is already running
+    if (status === 'running') {
+      const existingPort = await getContainerPort(containerName);
+      if (existingPort) {
+        await updateCaddyRoute(project.slug, existingPort);
+        return { success: true, container: containerName, port: existingPort };
+      }
+    }
+
+    // Container exists but is stopped — try to start it
+    if (status === 'stopped') {
+      try {
+        await execAsync(`docker start ${containerName}`);
+        const existingPort = await getContainerPort(containerName);
+        if (existingPort) {
+          await updateCaddyRoute(project.slug, existingPort);
+          return { success: true, container: containerName, port: existingPort };
+        }
+      } catch {
+        // Start failed, fall through to recreate
+      }
+    }
+
+    // Container doesn't exist or failed to start — create fresh
     await execAsync(`docker stop ${containerName}`).catch(() => {});
     await execAsync(`docker rm ${containerName}`).catch(() => {});
 

@@ -1,20 +1,25 @@
 <script setup lang="ts">
-import EditorPane from '@/components/editor/EditorPane.vue'
-import FileTree from '@/components/editor/FileTree.vue'
-import LogViewer from '@/components/editor/LogViewer.vue'
-import PreviewPane from '@/components/editor/PreviewPane.vue'
-import TerminalPane from '@/components/editor/TerminalPane.vue'
-import ThreeColumnLayout from '@/components/layout/ThreeColumnLayout.vue'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useEditor } from '@/composables/useEditor'
-import { useWebSocket } from '@/composables/useWebSocket'
-import { Loader2, Wifi, WifiOff } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import EditorPane from "@/components/editor/EditorPane.vue";
+import FileTree from "@/components/editor/FileTree.vue";
+import LogViewer from "@/components/editor/LogViewer.vue";
+import PreviewPane from "@/components/editor/PreviewPane.vue";
+import TerminalPane from "@/components/editor/TerminalPane.vue";
+import ThreeColumnLayout from "@/components/layout/ThreeColumnLayout.vue";
+import { Badge } from "@/components/ui/badge";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEditor } from "@/composables/useEditor";
+import { useWebSocket } from "@/composables/useWebSocket";
+import { Loader2, Wifi, WifiOff } from "lucide-vue-next";
+import { onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
 
-const route = useRoute()
-const projectSlug = route.params.project as string
+const route = useRoute();
+const projectSlug = route.params.project as string;
 
 const {
   dirListing,
@@ -28,86 +33,95 @@ const {
   deleteFile,
   renameFile,
   uploadFile,
-} = useEditor()
+} = useEditor();
 
-const logViewer = ref<InstanceType<typeof LogViewer>>()
-const previewPane = ref<InstanceType<typeof PreviewPane>>()
-const bottomTab = ref<'terminal' | 'logs'>('terminal')
+const logViewer = ref<InstanceType<typeof LogViewer>>();
+const previewPane = ref<InstanceType<typeof PreviewPane>>();
+const bottomTab = ref<"terminal" | "logs">("terminal");
 
-const loading = ref(true)
-const loadingStatus = ref('Loading project...')
-const loadError = ref('')
+const loading = ref(true);
+const loadingStatus = ref("Loading project...");
+const loadError = ref("");
 
-const { connected, connect, send, on } = useWebSocket(projectSlug)
+const { connected, connect, send, on } = useWebSocket(projectSlug);
 
 onMounted(async () => {
   try {
-    loadingStatus.value = 'Loading project files...'
-    await loadProject(projectSlug)
+    loadingStatus.value = "Loading project files...";
+    await loadProject(projectSlug);
 
-    loadingStatus.value = 'Starting container...'
-    const health = await ensureContainer(projectSlug)
+    loadingStatus.value = "Starting container...";
+    const health = await ensureContainer(projectSlug);
 
     if (!health.healthy) {
-      loadError.value = 'Container failed to start. You can still edit files.'
+      loadError.value = "Container failed to start. You can still edit files.";
     }
 
-    loading.value = false
+    loading.value = false;
 
     // Refresh preview after a short delay to give the container
     // time to accomodate port lag
     setTimeout(() => {
-      previewPane.value?.refresh()
+      previewPane.value?.refresh();
     }, 1500);
-    connect()
-    on('file-tree:update', (detail) => {
-      const path = detail.path as string
+    connect();
+    on("file-tree:update", (detail) => {
+      const path = detail.path as string;
       if (path) {
-        openFile(path)
+        openFile(path);
       }
-    })
+    });
   } catch (e: any) {
-    loadError.value = e.message || 'Failed to load project'
-    loading.value = false
+    loadError.value = e.message || "Failed to load project";
+    loading.value = false;
   }
-})
+});
 
 function handleSelectFile(filename: string) {
-  openFile(filename)
+  openFile(filename);
 }
 
 function handleCreateFile(filename: string) {
-  createFile(filename)
-  send('create', { path: filename, isFile: true })
+  createFile(filename);
+  send("create", { path: filename, isFile: true });
 }
 
-function handleDeleteFile(filename: string) {
-  if (!confirm(`Delete ${filename}?`)) return
-  deleteFile(filename)
-  send('delete', { path: filename })
+async function handleDeleteFile(filename: string) {
+  if (!confirm(`Delete ${filename}?`)) return;
+  await deleteFile(filename);
+  send("delete", { path: filename });
+  setTimeout(async () => {
+    await handleRefreshTree();
+  }, 1500); // Delay refresh to ensure file system changes are reflected
 }
 
-function handleRenameFile(oldPath: string, newPath: string) {
-  renameFile(oldPath, newPath)
-  send('move', { isFile: true, oldPath, newPath })
+async function handleRenameFile(oldPath: string, newPath: string) {
+  await renameFile(oldPath, newPath);
+  send("move", { isFile: true, oldPath, newPath });
+  setTimeout(async () => {
+    await handleRefreshTree();
+  }, 1500); // Delay refresh to ensure file system changes are reflected
 }
 
 function handleUploadFile(filename: string, formData: FormData) {
-  const file = formData.get('file') as File | null
+  const file = formData.get("file") as File | null;
   if (file) {
-    uploadFile(filename, file)
+    uploadFile(filename, file);
   }
 }
 
 async function handleRefreshTree() {
-  await loadProject(projectSlug)
+  await loadProject(projectSlug);
 }
 </script>
 
 <template>
   <div class="h-[calc(100vh-3.5rem)] flex flex-col">
     <!-- Loading screen -->
-    <div v-if="loading" class="flex-1 flex flex-col items-center justify-center gap-4">
+    <div
+      v-if="loading"
+      class="flex-1 flex flex-col items-center justify-center gap-4"
+    >
       <Loader2 class="h-10 w-10 animate-spin text-muted-foreground" />
       <p class="text-muted-foreground text-sm">{{ loadingStatus }}</p>
     </div>
@@ -115,7 +129,9 @@ async function handleRefreshTree() {
     <!-- Editor -->
     <template v-else>
       <!-- Status bar -->
-      <div class="flex items-center justify-between border-b px-4 py-1 text-xs bg-muted/30">
+      <div
+        class="flex items-center justify-between border-b px-4 py-1 text-xs bg-muted/30"
+      >
         <span class="font-medium">{{ projectSlug }}</span>
         <div class="flex items-center gap-2">
           <Badge v-if="loadError" variant="destructive" class="text-xs py-0">
@@ -146,41 +162,53 @@ async function handleRefreshTree() {
         </template>
 
         <template #center>
-          <div class="flex h-full flex-col">
-            <div class="flex-1 min-h-0">
+          <ResizablePanelGroup direction="vertical" class="h-full">
+            <ResizablePanel :default-size="70" :min-size="20">
               <EditorPane @saved="previewPane?.refreshAfterSave()" />
-            </div>
-            <div class="h-48 border-t flex flex-col">
-              <div class="flex items-center border-b bg-muted/40">
-                <button
-                  :class="[
-                    'px-3 py-1 text-xs font-medium transition-colors',
-                    bottomTab === 'terminal'
-                      ? 'bg-background text-foreground border-b-2 border-primary'
-                      : 'text-muted-foreground hover:bg-background/50'
-                  ]"
-                  @click="bottomTab = 'terminal'"
-                >
-                  Terminal
-                </button>
-                <button
-                  :class="[
-                    'px-3 py-1 text-xs font-medium transition-colors',
-                    bottomTab === 'logs'
-                      ? 'bg-background text-foreground border-b-2 border-primary'
-                      : 'text-muted-foreground hover:bg-background/50'
-                  ]"
-                  @click="bottomTab = 'logs'"
-                >
-                  Logs
-                </button>
+            </ResizablePanel>
+            <ResizableHandle with-handle />
+            <ResizablePanel :default-size="30" :min-size="10">
+              <div
+                class="flex h-full flex-col border-t shadow-[0_-2px_8px_rgba(0,0,0,0.1)]"
+              >
+                <div class="flex items-center border-b bg-muted/40">
+                  <button
+                    :class="[
+                      'px-3 py-1 text-xs font-medium transition-colors',
+                      bottomTab === 'terminal'
+                        ? 'bg-background text-foreground border-b-2 border-primary'
+                        : 'text-muted-foreground hover:bg-background/50',
+                    ]"
+                    @click="bottomTab = 'terminal'"
+                  >
+                    Terminal
+                  </button>
+                  <button
+                    :class="[
+                      'px-3 py-1 text-xs font-medium transition-colors',
+                      bottomTab === 'logs'
+                        ? 'bg-background text-foreground border-b-2 border-primary'
+                        : 'text-muted-foreground hover:bg-background/50',
+                    ]"
+                    @click="bottomTab = 'logs'"
+                  >
+                    Logs
+                  </button>
+                </div>
+                <div class="flex-1 min-h-0">
+                  <TerminalPane
+                    v-show="bottomTab === 'terminal'"
+                    :project-slug="projectSlug"
+                  />
+                  <LogViewer
+                    v-show="bottomTab === 'logs'"
+                    ref="logViewer"
+                    :project-slug="projectSlug"
+                  />
+                </div>
               </div>
-              <div class="flex-1 min-h-0">
-                <TerminalPane v-show="bottomTab === 'terminal'" :project-slug="projectSlug" />
-                <LogViewer v-show="bottomTab === 'logs'" ref="logViewer" />
-              </div>
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </template>
 
         <template #right>

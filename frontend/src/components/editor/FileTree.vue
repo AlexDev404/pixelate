@@ -144,11 +144,11 @@ function handleUpload(event: Event) {
         <Button variant="ghost" size="icon" class="h-6 w-6" @click="showNewFile = !showNewFile">
           <Plus class="h-3.5 w-3.5" />
         </Button>
-        <label class="cursor-pointer">
+        <label :class="['cursor-pointer', uploading ? 'pointer-events-none opacity-50' : '']">
           <Button variant="ghost" size="icon" class="h-6 w-6" as="span">
             <Upload class="h-3.5 w-3.5" />
           </Button>
-          <input type="file" class="hidden" @change="handleUpload" />
+          <input type="file" class="hidden" @change="handleUpload" :disabled="uploading" />
         </label>
       </div>
     </div>
