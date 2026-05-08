@@ -9,7 +9,7 @@ export class GitService {
     try {
       await execAsync(`git init "${dir}"`);
       await execAsync(`git -C "${dir}" add -A`);
-      await execAsync(`git -C "${dir}" commit -m "Initial commit" --allow-empty`);
+      await execAsync(`git -C "${dir}" -c commit.gpgsign=false commit -m "Initial commit" --allow-empty`);
     } catch {
       // git may not be available or dir issues
     }
@@ -19,7 +19,7 @@ export class GitService {
     const dir = projectDir(slug);
     try {
       await execAsync(`git -C "${dir}" add -A`);
-      await execAsync(`git -C "${dir}" commit -m "${message.replace(/"/g, '\\"')}" --allow-empty`);
+      await execAsync(`git -C "${dir}" -c commit.gpgsign=false commit -m "${message.replace(/"/g, '\\"')}" --allow-empty`);
     } catch {
       // nothing to commit or git error
     }
@@ -76,7 +76,7 @@ export class GitService {
   async rewindTo(slug: string, hash: string): Promise<void> {
     const dir = projectDir(slug);
     await execAsync(`git -C "${dir}" checkout ${hash} -- .`);
-    await this.commit(slug, `Reverted to ${hash}`);
+    await this.commit(slug, `Reverted to ${hash.replace(/"/g, '')}`);
   }
 
   async getFileAtCommit(slug: string, filename: string, hash: string): Promise<string> {

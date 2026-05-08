@@ -19,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   change: [value: string]
+  save: []
 }>()
 
 const editorRef = ref<HTMLDivElement>()
@@ -76,6 +77,13 @@ onMounted(() => {
       languageCompartment.of(getLanguage(props.filename)),
       readonlyCompartment.of(EditorState.readOnly.of(!!props.readonly)),
       keymap.of([
+        {
+          key: 'Mod-s',
+          run: () => {
+            emit('save')
+            return true
+          },
+        },
         ...defaultKeymap,
         ...historyKeymap,
         ...closeBracketsKeymap,

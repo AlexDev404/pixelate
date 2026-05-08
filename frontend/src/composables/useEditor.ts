@@ -11,7 +11,22 @@ export function useEditor() {
     store.setProject(slug)
     const listing = await backendAdapter.getDirListing(slug)
     store.setDirListing(listing)
-    store.previewUrl = `//${slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`
+    // In production, use subdomain-based preview
+    // In dev, use port-based preview from health endpoint
+    const isDev = import.meta.env.DEV
+    if (isDev) {
+      store.previewUrl = '' // will be set when health check returns a port
+      try {
+        const health = await backendAdapter.getProjectHealth(slug)
+        if (health.port) {
+          store.previewUrl = `//localhost:${health.port}`
+        }
+      } catch {
+        // No preview available yet
+      }
+    } else {
+      store.previewUrl = `//${slug}.${window.location.hostname.replace(/^[^.]+\./, '')}`
+    }
   }
 
   async function openFile(filename: string) {

@@ -28,10 +28,15 @@ function formatDate(dateStr: string) {
     <CardHeader class="flex-1">
       <div class="flex items-center justify-between">
         <CardTitle class="text-lg">
-          <RouterLink :to="`/editor/${project.slug}`" class="hover:underline flex items-center gap-2">
+          <component
+            :is="isStarter ? 'span' : RouterLink"
+            :to="isStarter ? undefined : `/editor/${project.slug}`"
+            class="flex items-center gap-2"
+            :class="{ 'hover:underline cursor-pointer': !isStarter }"
+          >
             <Code2 class="h-4 w-4 text-muted-foreground" />
             {{ project.name }}
-          </RouterLink>
+          </component>
         </CardTitle>
         <Badge v-if="isStarter" variant="secondary">Starter</Badge>
       </div>
@@ -47,6 +52,12 @@ function formatDate(dateStr: string) {
       </Button>
       <Button variant="ghost" size="icon" @click="emit('delete', project.slug)" title="Delete" class="text-destructive hover:text-destructive">
         <Trash2 class="h-4 w-4" />
+      </Button>
+    </CardFooter>
+    <CardFooter v-else-if="isStarter">
+      <Button variant="outline" size="sm" @click="emit('remix', project.slug)" class="w-full">
+        <GitFork class="h-4 w-4 mr-2" />
+        Use Template
       </Button>
     </CardFooter>
   </Card>

@@ -16,10 +16,11 @@ export interface BackendAdapter {
   getMainPageData(): Promise<MainPageData>
   deleteProject(slug: string): Promise<void>
   downloadProject(slug: string): void
-  getProjectHealth(slug: string): Promise<{ healthy: boolean; message?: string }>
+  getProjectHealth(slug: string): Promise<{ healthy: boolean; message?: string; port?: number }>
   getProjectHistory(slug: string, commit?: string): Promise<ProjectHistoryEntry[]>
   getProjectLogs(slug: string, since?: string): Promise<any>
   remixProject(slug: string, newName?: string): Promise<void>
+  createFromStarter(starterSlug: string, newName?: string): Promise<any>
   restartProject(slug: string): Promise<void>
   getProjectSettings(projectId: number): Promise<ProjectSettings>
   updateProjectSettings(projectId: number, settings: Record<string, any>): Promise<string>

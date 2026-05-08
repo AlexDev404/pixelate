@@ -1,63 +1,37 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable'
 
-const props = withDefaults(defineProps<{
-  leftWidth?: number
-  rightWidth?: number
-  minWidth?: number
+withDefaults(defineProps<{
+  leftSize?: number
+  rightSize?: number
+  minSize?: number
 }>(), {
-  leftWidth: 250,
-  rightWidth: 400,
-  minWidth: 150,
+  leftSize: 15,
+  rightSize: 30,
+  minSize: 10,
 })
-
-const leftW = ref(props.leftWidth)
-const rightW = ref(props.rightWidth)
-const dragging = ref<'left' | 'right' | null>(null)
-
-function startDrag(side: 'left' | 'right') {
-  dragging.value = side
-  document.addEventListener('mousemove', onDrag)
-  document.addEventListener('mouseup', stopDrag)
-}
-
-function onDrag(e: MouseEvent) {
-  if (dragging.value === 'left') {
-    leftW.value = Math.max(props.minWidth, e.clientX)
-  } else if (dragging.value === 'right') {
-    rightW.value = Math.max(props.minWidth, window.innerWidth - e.clientX)
-  }
-}
-
-function stopDrag() {
-  dragging.value = null
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', stopDrag)
-}
 </script>
 
 <template>
-  <div class="flex h-full overflow-hidden" :class="{ 'select-none': dragging }">
-    <div class="shrink-0 overflow-hidden border-r" :style="{ width: `${leftW}px` }">
+  <ResizablePanelGroup direction="horizontal" class="h-full">
+    <ResizablePanel :default-size="leftSize" :min-size="minSize">
       <slot name="left" />
-    </div>
+    </ResizablePanel>
 
-    <div
-      class="w-1 cursor-col-resize bg-border hover:bg-primary/20 transition-colors"
-      @mousedown.prevent="startDrag('left')"
-    />
+    <ResizableHandle with-handle />
 
-    <div class="flex-1 min-w-0 overflow-hidden">
+    <ResizablePanel :min-size="20">
       <slot name="center" />
-    </div>
+    </ResizablePanel>
 
-    <div
-      class="w-1 cursor-col-resize bg-border hover:bg-primary/20 transition-colors"
-      @mousedown.prevent="startDrag('right')"
-    />
+    <ResizableHandle with-handle />
 
-    <div class="shrink-0 overflow-hidden border-l" :style="{ width: `${rightW}px` }">
+    <ResizablePanel :default-size="rightSize" :min-size="minSize">
       <slot name="right" />
-    </div>
-  </div>
+    </ResizablePanel>
+  </ResizablePanelGroup>
 </template>

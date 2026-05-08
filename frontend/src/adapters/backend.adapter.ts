@@ -81,6 +81,14 @@ export const backendAdapter: BackendAdapter = {
     await ok(await fetch(url))
   },
 
+  // Backend: GET /api/v1/projects/from-starter/:starter/:newname?
+  async createFromStarter(starterSlug, newName?) {
+    const url = newName
+      ? `/api/v1/projects/from-starter/${starterSlug}/${encodeURIComponent(newName)}`
+      : `/api/v1/projects/from-starter/${starterSlug}`
+    return json<any>(await fetch(url))
+  },
+
   // Backend: POST /api/v1/projects/restart/:project
   async restartProject(slug) {
     await ok(await fetch(`/api/v1/projects/restart/${slug}`, { method: 'POST' }))

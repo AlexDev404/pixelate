@@ -11,6 +11,7 @@ import { eq, and, isNull, desc } from 'drizzle-orm';
 import { AccessLevel } from '@pixelate/types';
 import { slugify, projectDir } from '../lib/helpers.js';
 import { gitService } from './git.service.js';
+import { env } from '../lib/env.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -121,17 +122,46 @@ export class ProjectService {
   }
 
   async listStarterProjects() {
-    const starters = await db.query.starterProjects.findMany({
-      with: { },
-    });
-    const ids = starters.map((s) => s.project_id);
-    if (ids.length === 0) return [];
-    const result = [];
-    for (const id of ids) {
-      const p = await this.findById(id);
-      if (p) result.push(p);
+    // First try the database
+    const starters = await db.query.starterProjects.findMany();
+    if (starters.length > 0) {
+      const result = [];
+      for (const s of starters) {
+        const p = await this.findById(s.project_id);
+        if (p) result.push(p);
+      }
+      return result;
     }
-    return result;
+
+    // Fall back to scanning the filesystem content/__starter_projects/
+    const startersDir = path.join(env.CONTENT_DIR, '__starter_projects');
+    try {
+      const entries = await fs.readdir(startersDir, { withFileTypes: true });
+      const results = [];
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const settingsPath = path.join(startersDir, entry.name, '.container', 'settings.json');
+        try {
+          const raw = await fs.readFile(settingsPath, 'utf-8');
+          const settings = JSON.parse(raw);
+          results.push({
+            id: 0,
+            name: settings.name || entry.name,
+            slug: entry.name,
+            description: settings.description || null,
+            created_at: new Date(),
+            updated_at: new Date(),
+            _settings: settings,
+            _isFilesystemStarter: true,
+          });
+        } catch {
+          // No settings.json, skip
+        }
+      }
+      return results;
+    } catch {
+      return [];
+    }
   }
 
   async remixProject(

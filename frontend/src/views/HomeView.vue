@@ -10,8 +10,26 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 
+import { useRouter } from 'vue-router'
+import { backendAdapter } from '@/adapters/backend.adapter'
+
 const { isAuthenticated } = useAuth()
 const { projects, starters, loading, error, fetchMainPage, deleteProject, remixProject, downloadProject } = useProjects()
+const router = useRouter()
+
+async function useStarter(slug: string) {
+  if (!isAuthenticated.value) {
+    // Scroll to the signup/login section on the same page
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  try {
+    const result = await backendAdapter.createFromStarter(slug)
+    router.push(`/editor/${result.slug}`)
+  } catch (e: any) {
+    alert(e.message || 'Failed to create project')
+  }
+}
 
 onMounted(() => {
   fetchMainPage()
@@ -82,7 +100,7 @@ onMounted(() => {
           <p class="text-muted-foreground mb-4">
             Try one of these starter templates to get started instantly.
           </p>
-          <ProjectList :projects="starters" is-starter />
+          <ProjectList :projects="starters" is-starter @remix="useStarter" />
         </div>
       </div>
     </template>

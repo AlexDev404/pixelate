@@ -14,6 +14,8 @@ import { projectDir } from '../lib/helpers.js';
 import archiver from 'archiver';
 import { Readable } from 'stream';
 import { env } from '../lib/env.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 const projectRoutes = new Hono();
 
@@ -87,7 +89,7 @@ projectRoutes.get('/logs/:project/:since?', projectLookup(), async (c) => {
   return c.json(result);
 });
 
-// Remix/fork project
+// Remix/fork project (DB-based projects)
 projectRoutes.get('/remix/:project/:newname?', verifyLogin(), projectLookup(), async (c) => {
   const project = c.get('project')!;
   const userId = c.get('userId')!;
@@ -99,6 +101,60 @@ projectRoutes.get('/remix/:project/:newname?', verifyLogin(), projectLookup(), a
       newName: newname,
       userId,
     });
+    return c.json(newProject);
+  } catch (err) {
+    return c.json({ error: String(err) }, 400);
+  }
+});
+
+// Create project from filesystem starter template
+projectRoutes.get('/from-starter/:starter/:newname?', verifyLogin(), async (c) => {
+  const starterSlug = c.req.param('starter');
+  const userId = c.get('userId')!;
+  const newname = c.req.param('newname') || `${starterSlug}-remix`;
+
+  const starterDir = path.join(env.CONTENT_DIR, '__starter_projects', starterSlug);
+  try {
+    await fs.access(starterDir);
+  } catch {
+    return c.json({ error: 'Starter template not found' }, 404);
+  }
+
+  try {
+    // Check if name/slug already exists
+    const { slugify } = await import('../lib/helpers.js');
+    const slug = slugify(newname);
+    const existing = await projectService.findBySlug(slug);
+    if (existing) {
+      return c.json({ error: 'A project with this name already exists. Please choose a different name.' }, 409);
+    }
+
+    // Read starter settings
+    let settings: Record<string, any> = {};
+    try {
+      const raw = await fs.readFile(path.join(starterDir, '.container', 'settings.json'), 'utf-8');
+      settings = JSON.parse(raw);
+    } catch { /* no settings */ }
+
+    // Create the project in DB
+    const newProject = await projectService.createProject(newname, userId, settings.description);
+
+    // Copy starter files (excluding .container)
+    const destDir = projectDir(newProject.slug);
+    const entries = await fs.readdir(starterDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === '.container') continue;
+      const src = path.join(starterDir, entry.name);
+      const dest = path.join(destDir, entry.name);
+      await fs.cp(src, dest, { recursive: true });
+    }
+
+    // Apply project settings from the starter
+    const { description, name, ...projSettings } = settings;
+    if (Object.keys(projSettings).length > 0) {
+      await projectService.updateSettings(newProject.id, projSettings);
+    }
+
     return c.json(newProject);
   } catch (err) {
     return c.json({ error: String(err) }, 400);

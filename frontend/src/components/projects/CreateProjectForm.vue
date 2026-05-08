@@ -5,28 +5,29 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useProjects } from '@/composables/useProjects'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { backendAdapter } from '@/adapters/backend.adapter'
 import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   starters: Project[]
 }>()
 
-const { remixProject } = useProjects()
 const router = useRouter()
 const selectedStarter = ref<string | null>(null)
 const newName = ref('')
 const loading = ref(false)
+const errorMsg = ref('')
 
 async function create() {
   if (!selectedStarter.value) return
   loading.value = true
+  errorMsg.value = ''
   try {
-    await remixProject(selectedStarter.value, newName.value || undefined)
-    const slug = newName.value || selectedStarter.value
-    router.push(`/editor/${slug}`)
-  } catch {
-    // Handle error
+    const result = await backendAdapter.createFromStarter(selectedStarter.value, newName.value || undefined)
+    router.push(`/editor/${result.slug}`)
+  } catch (e: any) {
+    errorMsg.value = e.message || 'Failed to create project'
   } finally {
     loading.value = false
   }
@@ -40,6 +41,9 @@ async function create() {
     </CardHeader>
     <CardContent>
       <div class="space-y-4">
+        <Alert v-if="errorMsg" variant="destructive">
+          <AlertDescription>{{ errorMsg }}</AlertDescription>
+        </Alert>
         <div class="space-y-2">
           <Label>Choose a starter template</Label>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">

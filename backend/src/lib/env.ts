@@ -28,7 +28,7 @@ export const env = {
   TLS_DNS_API_KEY: process.env.TLS_DNS_API_KEY || '',
 
   // Content directories
-  CONTENT_DIR: process.env.CONTENT_DIR || './content',
+  CONTENT_DIR: process.env.CONTENT_DIR || '../content',
 
   // Docker
   DOCKER_NETWORK: process.env.DOCKER_NETWORK || 'pixelate-net',

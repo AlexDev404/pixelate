@@ -19,6 +19,12 @@ function onChange(value: string) {
   }
 }
 
+function onSave() {
+  if (activeFile.value && activeTab.value) {
+    syncFile(activeFile.value, activeTab.value.content)
+  }
+}
+
 function onUpdate(value: string) {
   if (activeFile.value) {
     updateContent(activeFile.value, value)
@@ -37,6 +43,7 @@ function onUpdate(value: string) {
           :filename="activeTab.filename"
           @update:model-value="onUpdate"
           @change="onChange"
+          @save="onSave"
         />
       </template>
       <div v-else class="flex h-full items-center justify-center text-muted-foreground">

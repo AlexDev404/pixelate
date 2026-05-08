@@ -65,6 +65,7 @@ export interface DirListing {
 export interface HealthStatus {
   healthy: boolean;
   message?: string;
+  port?: number;
 }
 
 export interface ProjectHistoryEntry {
