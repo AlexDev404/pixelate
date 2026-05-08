@@ -8,7 +8,8 @@ See the [release notes](./RELEASES.md) for more information about the current re
 
 ## Use the web to build the web
 
-<img width="100%" style="border: 1px solid black" src="public/screenshot.png">
+<img width="1895" height="887" alt="image" src="https://github.com/user-attachments/assets/cff007bf-4dee-4295-8de2-fdb29970d97e" />
+<img width="1907" height="896" alt="image" src="https://github.com/user-attachments/assets/c65140cd-3272-4895-9cfb-9cdd19ca9f88" />
 
 This is an attempt at implementing a friendly browser-based web content editing platform, using [codemirror 6](https://codemirror.net) as editor interface, [&lt;file-tree&gt;](https://github.com/pomax/custom-file-tree) as file tree component (as codemirror itself only models single editing panels), and a sprinkling of docker for runtime isolation and a reverse proxy because we like opening https URLs, and we don't like having to remember port numbers.
 
